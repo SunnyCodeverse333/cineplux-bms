@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movies — CinePlex</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header id="main-nav" class="navbar"></header>
+
+<main class="page-content">
+
+  <!-- Header row -->
+  <div class="flex items-center justify-between mb-lg" style="flex-wrap:wrap;gap:1rem">
+    <h1 class="display-md">All Movies</h1>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+      <div class="search-bar" style="width:280px">
+        <span class="search-bar__icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search title…" autocomplete="off">
+        <button onclick="handleSearch()">Go</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters row -->
+  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1.5rem">
+    <div>
+      <div class="form-label mb-sm">Genre</div>
+      <div class="filter-chips" id="genre-chips"></div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+      <div class="form-group" style="flex-direction:row;align-items:center;gap:.5rem">
+        <label class="form-label" style="white-space:nowrap">Language</label>
+        <select class="form-control" id="lang-filter" style="width:auto" onchange="applyFilters()">
+          <option value="">All</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="clearAll()">Clear All</button>
+    </div>
+  </div>
+
+  <!-- Count -->
+  <div style="font-size:.875rem;color:var(--text-muted);margin-bottom:1rem" id="result-count"></div>
+
+  <!-- Grid -->
+  <div class="movies-grid" id="movies-grid"></div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let allMovies = [];
+  let activeGenre = '';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    Utils.initNavbar('movies');
+    const grid = document.getElementById('movies-grid');
+    Utils.renderMovieSkeletons(grid, 12);
+    try {
+      allMovies = await API.Movies.getAll();
+      buildFilters();
+      applyFilters();
+    } catch {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state__icon">⚠️</div>
+        <div class="empty-state__title">Backend not reachable</div>
+        <div class="empty-state__sub">Start the Spring Boot server on port 8080</div>
+      </div>`;
+    }
+
+    document.getElementById('search-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleSearch();
+    });
+  });
+
+  function buildFilters() {
+    const genres = [...new Set(allMovies.map(m => m.genre).filter(Boolean))].sort();
+    const chips  = document.getElementById('genre-chips');
+    chips.innerHTML = `<span class="chip active" onclick="selectGenre(this,'')">All</span>`
+      + genres.map(g => `<span class="chip" onclick="selectGenre(this,'${g}')">${g}</span>`).join('');
+
+    const langs = [...new Set(allMovies.map(m => m.language).filter(Boolean))].sort();
+    const sel   = document.getElementById('lang-filter');
+    sel.innerHTML = `<option value="">All</option>`
+      + langs.map(l => `<option value="${l}">${l}</option>`).join('');
+  }
+
+  function selectGenre(el, g) {
+    activeGenre = g;
+    document.querySelectorAll('#genre-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('search-input').value = '';
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const lang = document.getElementById('lang-filter').value;
+    let movies = allMovies;
+    if (activeGenre) movies = movies.filter(m => m.genre === activeGenre);
+    if (lang)        movies = movies.filter(m => m.language === lang);
+    document.getElementById('result-count').textContent =
+      `Showing ${movies.length} movie${movies.length !== 1 ? 's' : ''}`;
+    Utils.renderMovies(movies, document.getElementById('movies-grid'));
+  }
+
+  async function handleSearch() {
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) { applyFilters(); return; }
+    const grid = document.getElementById('movies-grid');
+    Utils.renderMovieSkeletons(grid, 6);
+    try {
+      const results = await API.Movies.search(q);
+      document.getElementById('result-count').textContent = `${results.length} result${results.length!==1?'s':''} for "${q}"`;
+      Utils.renderMovies(results, grid);
+    } catch { showToast('Search failed', 'error'); }
+  }
+
+  function clearAll() {
+    activeGenre = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('lang-filter').value = '';
+    document.querySelectorAll('#genre-chips .chip').forEach((c,i) => c.classList.toggle('active', i===0));
+    applyFilters();
+  }
+</script>
+</body>
+</html>

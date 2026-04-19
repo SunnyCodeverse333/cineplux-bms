@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie — CinePlex</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header id="main-nav" class="navbar"></header>
+
+<!-- Movie Hero -->
+<div class="movie-hero" id="movie-hero">
+  <div class="movie-hero__backdrop" id="hero-backdrop"></div>
+  <div class="movie-hero__content">
+    <div class="movie-hero__poster" id="hero-poster">🎬</div>
+    <div class="movie-hero__info">
+      <div class="flex items-center gap-sm mb-sm">
+        <a href="movies.html" style="font-size:.85rem;color:var(--text-muted)">← Movies</a>
+      </div>
+      <h1 class="movie-hero__title" id="movie-title">Loading…</h1>
+      <div class="movie-hero__tags" id="movie-tags"></div>
+      <div class="movie-hero__rating" id="movie-rating"></div>
+      <dl class="movie-hero__meta" id="movie-meta"></dl>
+      <div class="flex gap-sm mt-md" id="hero-actions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Content -->
+<main class="page-content" id="main-content" style="padding-top:2rem">
+  <div class="loading-overlay" id="loading-shows">
+    <div class="spinner"></div>
+    <span>Loading shows…</span>
+  </div>
+  <div id="shows-content" class="hidden"></div>
+</main>
+
+<!-- ══ Seat Selection Modal ══ -->
+<div class="modal-backdrop" id="seat-modal">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <span class="modal__title">Select Seats</span>
+      <button class="modal__close" onclick="closeModal('seat-modal')">✕</button>
+    </div>
+    <div class="modal__body">
+      <div id="show-info-bar" style="
+        background:var(--bg-elevated);border:1px solid var(--border);
+        border-radius:var(--radius-sm);padding:.75rem 1rem;
+        display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.85rem;
+        color:var(--text-secondary);margin-bottom:1.5rem;
+      "></div>
+
+      <!-- Seat Map -->
+      <div class="seatmap" id="seatmap-container"></div>
+
+      <!-- Selected summary -->
+      <div id="seat-summary" style="
+        margin-top:1.5rem;background:var(--bg-elevated);
+        border:1px solid var(--border-accent);border-radius:var(--radius-sm);
+        padding:1rem;display:none;
+      ">
+        <div class="flex justify-between items-center">
+          <span style="font-size:.875rem;color:var(--text-secondary)">Selected: <strong id="seats-selected-list"></strong></span>
+          <span style="font-size:1.25rem;font-weight:700;color:var(--accent)" id="total-price">₹0</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal('seat-modal')">Cancel</button>
+      <button class="btn btn-primary" id="confirm-booking-btn" disabled onclick="confirmBooking()">
+        Confirm Booking
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Booking Success Modal ══ -->
+<div class="modal-backdrop" id="success-modal">
+  <div class="modal">
+    <div class="modal__body" style="text-align:center;padding:2.5rem">
+      <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
+      <h2 style="font-family:var(--font-display);font-size:2rem;letter-spacing:.04em;color:var(--accent);margin-bottom:.5rem">
+        Booking Confirmed!
+      </h2>
+      <p style="color:var(--text-secondary);margin-bottom:1.5rem" id="success-details"></p>
+      <div class="flex gap-sm" style="justify-content:center;flex-wrap:wrap">
+        <a href="bookings.html" class="btn btn-primary">View My Bookings</a>
+        <button class="btn btn-ghost" onclick="closeModal('success-modal')">Book More</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let movieId, movie, selectedShow, selectedSeats = [], availableSeats = [];
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    Utils.initNavbar('movies');
+    movieId = Utils.getParam('id');
+    if (!movieId) { window.location.href = 'movies.html'; return; }
+
+    try {
+      movie = await API.Movies.getById(movieId);
+      renderHero(movie);
+      document.title = `${movie.title} — CinePlex`;
+      await loadShows();
+    } catch (e) {
+      document.getElementById('movie-title').textContent = 'Movie not found';
+      showToast('Could not load movie', 'error');
+    }
+  });
+
+  function renderHero(m) {
+    document.getElementById('movie-title').textContent = m.title;
+
+    if (m.posterUrl) {
+      const img = document.createElement('img');
+      img.src = m.posterUrl; img.alt = m.title;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:var(--radius-md)';
+      const p = document.getElementById('hero-poster');
+      p.innerHTML = ''; p.appendChild(img);
+      document.getElementById('hero-backdrop').style.backgroundImage = `url(${m.posterUrl})`;
+    }
+
+    const tags = document.getElementById('movie-tags');
+    tags.innerHTML = [m.genre, m.language].filter(Boolean)
+      .map(t => `<span class="movie-card__genre">${t}</span>`).join('')
+      + (m.releaseDate ? `<span class="movie-card__genre">${Utils.formatDate(m.releaseDate)}</span>` : '');
+
+    if (m.rating) {
+      document.getElementById('movie-rating').innerHTML =
+        `★ ${m.rating} <span>/ 10</span>`;
+    }
+
+    document.getElementById('movie-meta').innerHTML = [
+      m.durationMinutes ? `<div><dt>Duration </dt><dd>${m.durationMinutes} min</dd></div>` : '',
+      m.language        ? `<div><dt>Language </dt><dd>${m.language}</dd></div>` : '',
+      m.genre           ? `<div><dt>Genre </dt><dd>${m.genre}</dd></div>` : '',
+    ].join('');
+  }
+
+  async function loadShows() {
+    const loading  = document.getElementById('loading-shows');
+    const content  = document.getElementById('shows-content');
+    loading.classList.remove('hidden'); content.classList.add('hidden');
+
+    try {
+      const shows = await API.Shows.byMovie(movieId);
+      loading.classList.add('hidden');
+
+      if (!shows.length) {
+        content.innerHTML = `<div class="empty-state">
+          <div class="empty-state__icon">🎭</div>
+          <div class="empty-state__title">No shows scheduled</div>
+          <div class="empty-state__sub">Check back later for upcoming screenings</div>
+        </div>`;
+        content.classList.remove('hidden');
+        return;
+      }
+
+      // Group by date
+      const byDate = {};
+      shows.forEach(s => {
+        const d = s.showDate;
+        if (!byDate[d]) byDate[d] = [];
+        byDate[d].push(s);
+      });
+
+      const dates = Object.keys(byDate).sort();
+      const today = Utils.todayStr();
+
+      // Date tabs
+      let html = `<div class="section-header"><h2 class="section-title">Showtimes</h2></div>
+        <div class="date-tabs mb-md" id="date-tabs">`;
+      dates.forEach((d, i) => {
+        const dt  = new Date(d + 'T00:00:00');
+        const day = dt.toLocaleDateString('en-IN', { weekday: 'short' });
+        const num = dt.getDate();
+        html += `<div class="date-tab ${i===0?'active':''}" onclick="selectDate(this,'${d}')">
+          <div class="date-tab__day">${d === today ? 'Today' : day}</div>
+          <div class="date-tab__date">${num}</div>
+        </div>`;
+      });
+      html += `</div><div id="shows-by-date"></div>`;
+      content.innerHTML = html;
+      content.classList.remove('hidden');
+
+      renderShowsForDate(dates[0], byDate);
+      content._showsByDate = byDate;
+      content._dates       = dates;
+    } catch {
+      loading.classList.add('hidden');
+      content.innerHTML = `<div class="empty-state"><div class="empty-state__title">Failed to load shows</div></div>`;
+      content.classList.remove('hidden');
+    }
+  }
+
+  function selectDate(el, date) {
+    document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const content = document.getElementById('shows-content');
+    renderShowsForDate(date, content._showsByDate);
+  }
+
+  function renderShowsForDate(date, byDate) {
+    const shows  = byDate[date] || [];
+    const cont   = document.getElementById('shows-by-date');
+
+    // Group by theater via screen
+    const byScreen = {};
+    shows.forEach(s => {
+      const key = s.screen?.id || 'unknown';
+      if (!byScreen[key]) byScreen[key] = { screen: s.screen, shows: [] };
+      byScreen[key].shows.push(s);
+    });
+
+    cont.innerHTML = Object.values(byScreen).map(({ screen, shows }) => `
+      <div class="card mb-md" style="padding:1.25rem">
+        <div style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;
+             letter-spacing:.06em;margin-bottom:.75rem">
+          Screen ${screen?.name || screen?.id || '—'}
+          ${screen?.theater ? ` · ${screen.theater.name || ''}` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:.6rem">
+          ${shows.map(s => `
+            <button class="show-time-btn" onclick="openSeatModal(${s.id})">
+              ${Utils.formatTime(s.startTime)}
+              <span>₹${s.ticketPrice || '?'}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+    `).join('') || `<div class="empty-state"><div class="empty-state__title">No shows on this date</div></div>`;
+  }
+
+  async function openSeatModal(showId) {
+    if (!Utils.requireLogin()) return;
+    selectedShow  = null; selectedSeats = []; availableSeats = [];
+
+    try {
+      const [show, seats] = await Promise.all([
+        API.Shows.getById(showId),
+        API.Bookings.availableSeats(showId),
+      ]);
+      selectedShow   = show;
+      availableSeats = seats;
+
+      // Show info bar
+      document.getElementById('show-info-bar').innerHTML = `
+        <span>🎬 ${movie.title}</span>
+        <span>🕐 ${Utils.formatTime(show.startTime)}</span>
+        <span>📅 ${Utils.formatDate(show.showDate)}</span>
+        <span>💺 Screen ${show.screen?.name || show.screen?.id}</span>
+        <span>💰 ₹${show.ticketPrice} / seat</span>
+      `;
+
+      // Build seat map from available seats
+      renderSeatMap(seats, show);
+      openModal('seat-modal');
+    } catch (e) {
+      showToast('Could not load seats: ' + e.message, 'error');
+    }
+  }
+
+  function renderSeatMap(seats, show) {
+    const container = document.getElementById('seatmap-container');
+    if (!seats.length) {
+      container.innerHTML = `<div class="empty-state">
+        <div class="empty-state__title">No seats available</div></div>`;
+      return;
+    }
+
+    // Group by row label
+    const rows = {};
+    seats.forEach(s => {
+      const row = s.row || 'A';
+      if (!rows[row]) rows[row] = [];
+      rows[row].push(s);
+    });
+
+    let html = `<div class="seatmap__screen"></div>`;
+    Object.entries(rows).sort(([a],[b]) => a.localeCompare(b)).forEach(([row, rowSeats]) => {
+      rowSeats.sort((a, b) => String(a.seatNumber).localeCompare(String(b.seatNumber), undefined, { numeric: true }));
+      html += `<div class="seatmap__row">
+        <div class="seatmap__row-label">${row}</div>
+        ${rowSeats.map(s => {
+          const isVip = s.seatType === 'PREMIUM';
+          return `<div class="seat seat--available ${isVip ? 'seat--vip' : ''}"
+            id="seat-${s.id}" data-id="${s.id}" data-price="${show.ticketPrice}"
+            title="${row}${s.seatNumber} · ${s.seatType || 'REGULAR'} · ₹${show.ticketPrice}"
+            onclick="toggleSeat(this, ${s.id}, ${show.ticketPrice})">
+          </div>`;
+        }).join('')}
+      </div>`;
+    });
+
+    html += `<div class="seatmap__legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bg-elevated);border-color:var(--border-hover)"></div> Available</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent);border-color:var(--accent)"></div> Selected</div>
+    </div>`;
+
+    container.innerHTML = html;
+  }
+
+  function toggleSeat(el, seatId, price) {
+    if (el.classList.contains('seat--booked')) return;
+    const idx = selectedSeats.indexOf(seatId);
+    if (idx === -1) {
+      selectedSeats.push(seatId);
+      el.classList.remove('seat--available'); el.classList.add('seat--selected');
+    } else {
+      selectedSeats.splice(idx, 1);
+      el.classList.remove('seat--selected'); el.classList.add('seat--available');
+    }
+    updateSeatSummary(price);
+  }
+
+  function updateSeatSummary(pricePerSeat) {
+    const summary = document.getElementById('seat-summary');
+    const btn     = document.getElementById('confirm-booking-btn');
+    if (selectedSeats.length > 0) {
+      summary.style.display = 'block';
+      const total = selectedSeats.length * pricePerSeat;
+      document.getElementById('seats-selected-list').textContent = `${selectedSeats.length} seat(s)`;
+      document.getElementById('total-price').textContent = `₹${total.toFixed(2)}`;
+      btn.disabled = false;
+      btn.textContent = `Confirm ${selectedSeats.length} Seat${selectedSeats.length>1?'s':''} — ₹${total.toFixed(2)}`;
+    } else {
+      summary.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Confirm Booking';
+    }
+  }
+
+  async function confirmBooking() {
+    if (!selectedSeats.length || !selectedShow) return;
+    const btn = document.getElementById('confirm-booking-btn');
+    btn.disabled = true; btn.textContent = 'Booking…';
+
+    try {
+      const booking = await API.Bookings.create(selectedShow.id, selectedSeats);
+      closeModal('seat-modal');
+      const total = (selectedSeats.length * selectedShow.ticketPrice).toFixed(2);
+      document.getElementById('success-details').innerHTML =
+        `Booking #${booking.id} · ${selectedSeats.length} seat(s) · ₹${total}`;
+      openModal('success-modal');
+      selectedSeats = [];
+    } catch (e) {
+      showToast('Booking failed: ' + e.message, 'error');
+      btn.disabled = false; btn.textContent = 'Confirm Booking';
+    }
+  }
+</script>
+</body>
+</html>

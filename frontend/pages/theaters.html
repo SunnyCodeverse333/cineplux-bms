@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theaters — CinePlex</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header id="main-nav" class="navbar"></header>
+
+<main class="page-content">
+
+  <div class="flex items-center justify-between mb-lg" style="flex-wrap:wrap;gap:1rem">
+    <h1 class="display-md">Theaters</h1>
+    <div class="flex items-center gap-sm">
+      <label class="form-label" style="white-space:nowrap">Filter by city</label>
+      <select class="form-control" id="city-filter" style="width:auto" onchange="filterByCity()">
+        <option value="">All Cities</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="theaters-count" style="font-size:.875rem;color:var(--text-muted);margin-bottom:1rem"></div>
+
+  <div id="theaters-grid" style="
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem
+  "></div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let allTheaters = [];
+  let allCities   = [];
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    Utils.initNavbar('theaters');
+    const grid = document.getElementById('theaters-grid');
+    grid.innerHTML = `<div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+    try {
+      [allTheaters, allCities] = await Promise.all([
+        API.Theaters.getAll(),
+        API.Cities.getAll(),
+      ]);
+      buildCityFilter();
+      renderTheaters(allTheaters);
+    } catch {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state__icon">⚠️</div>
+        <div class="empty-state__title">Could not load theaters</div>
+      </div>`;
+    }
+  });
+
+  function buildCityFilter() {
+    const sel = document.getElementById('city-filter');
+    sel.innerHTML = `<option value="">All Cities</option>`
+      + allCities.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
+
+  function filterByCity() {
+    const cityId = document.getElementById('city-filter').value;
+    const theaters = cityId
+      ? allTheaters.filter(t => String(t.city?.id) === cityId)
+      : allTheaters;
+    renderTheaters(theaters);
+  }
+
+  function renderTheaters(theaters) {
+    document.getElementById('theaters-count').textContent =
+      `${theaters.length} theater${theaters.length !== 1 ? 's' : ''} found`;
+
+    const grid = document.getElementById('theaters-grid');
+    if (!theaters.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state__icon">🏛️</div>
+        <div class="empty-state__title">No theaters found</div>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = theaters.map(t => `
+      <div class="theater-card">
+        <div class="theater-card__name">${t.name}</div>
+        <div class="theater-card__meta">
+          ${t.city ? `<span>📍 ${t.city.name}</span>` : ''}
+          ${t.address ? `<span>🏠 ${t.address}</span>` : ''}
+          ${t.totalScreens ? `<span>🎭 ${t.totalScreens} Screen${t.totalScreens>1?'s':''}</span>` : ''}
+        </div>
+        <div class="flex gap-sm">
+          <a href="movies.html" class="btn btn-outline btn-sm">View Shows</a>
+        </div>
+      </div>
+    `).join('');
+  }
+</script>
+</body>
+</html>

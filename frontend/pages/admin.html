@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — CinePlex</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header id="main-nav" class="navbar"></header>
+
+<main class="page-content">
+
+  <div class="flex items-center gap-md mb-lg" style="flex-wrap:wrap">
+    <h1 class="display-md">Admin Dashboard</h1>
+    <span class="badge badge-admin">ADMIN</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="stat-card__label">Movies</div><div class="stat-card__value" id="stat-movies">—</div></div>
+    <div class="stat-card"><div class="stat-card__label">Theaters</div><div class="stat-card__value" id="stat-theaters">—</div></div>
+    <div class="stat-card"><div class="stat-card__label">Shows</div><div class="stat-card__value" id="stat-shows">—</div></div>
+    <div class="stat-card"><div class="stat-card__label">Users</div><div class="stat-card__value" id="stat-users">—</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="showTab('movies-tab',this)">🎬 Movies</button>
+    <button class="admin-tab" onclick="showTab('shows-tab',this)">🎭 Shows</button>
+    <button class="admin-tab" onclick="showTab('theaters-tab',this)">🏛️ Theaters</button>
+    <button class="admin-tab" onclick="showTab('screens-tab',this)">📺 Screens</button>
+    <button class="admin-tab" onclick="showTab('seats-tab',this)">💺 Seats</button>
+    <button class="admin-tab" onclick="showTab('cities-tab',this)">🌆 Cities</button>
+    <button class="admin-tab" onclick="showTab('users-tab',this)">👥 Users</button>
+  </div>
+
+  <!-- ── MOVIES TAB ── -->
+  <div class="admin-panel active" id="movies-tab">
+    <div class="flex justify-between items-center mb-md" style="flex-wrap:wrap;gap:.75rem">
+      <h2 class="section-title" style="font-size:1.4rem">Movies</h2>
+      <button class="btn btn-primary btn-sm" onclick="openModal('add-movie-modal')">+ Add Movie</button>
+    </div>
+    <div class="data-table__wrap">
+      <table class="data-table" id="movies-table">
+        <thead><tr>
+          <th>ID</th><th>Title</th><th>Genre</th><th>Language</th><th>Duration</th><th>Rating</th><th>Release</th>
+        </tr></thead>
+        <tbody id="movies-tbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SHOWS TAB ── -->
+  <div class="admin-panel" id="shows-tab">
+    <div class="flex justify-between items-center mb-md" style="flex-wrap:wrap;gap:.75rem">
+      <h2 class="section-title" style="font-size:1.4rem">Shows</h2>
+      <button class="btn btn-primary btn-sm" onclick="openModal('add-show-modal')">+ Add Show</button>
+    </div>
+    <div class="data-table__wrap">
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Movie</th><th>Screen</th><th>Date</th><th>Time</th><th>Price</th></tr></thead>
+        <tbody id="shows-tbody"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── THEATERS TAB ── -->
+  <div class="admin-panel" id="theaters-tab">
+    <div class="flex justify-between items-center mb-md" style="flex-wrap:wrap;gap:.75rem">
+      <h2 class="section-title" style="font-size:1.4rem">Theaters</h2>
+      <button class="btn btn-primary btn-sm" onclick="openModal('add-theater-modal')">+ Add Theater</button>
+    </div>
+    <div class="data-table__wrap">
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Name</th><th>City</th><th>Address</th><th>Screens</th></tr></thead>
+        <tbody id="theaters-tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SCREENS TAB ── -->
+  <div class="admin-panel" id="screens-tab">
+    <div class="flex justify-between items-center mb-md" style="flex-wrap:wrap;gap:.75rem">
+      <h2 class="section-title" style="font-size:1.4rem">Screens</h2>
+      <button class="btn btn-primary btn-sm" onclick="openModal('add-screen-modal')">+ Add Screen</button>
+    </div>
+    <div class="data-table__wrap">
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Name</th><th>Theater</th><th>Capacity</th></tr></thead>
+        <tbody id="screens-tbody"><tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SEATS TAB ── -->
+  <div class="admin-panel" id="seats-tab">
+    <div class="flex justify-between items-center mb-md" style="flex-wrap:wrap;gap:.75rem">
+      <h2 class="section-title" style="font-size:1.4rem">Add Seat</h2>
+    </div>
+    <div class="card" style="padding:1.5rem;max-width:500px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" id="seat-form">
+        <div class="form-group">
+          <label class="form-label">Screen ID</label>
+          <input class="form-control" type="number" id="seat-screenId" placeholder="Screen ID">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Seat Number</label>
+          <input class="form-control" type="text" id="seat-number" placeholder="e.g. 1 or A1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Row</label>
+          <input class="form-control" type="text" id="seat-row" placeholder="e.g. A" maxlength="2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Column *</label>
+          <input class="form-control" type="number" id="seat-col" placeholder="e.g. 1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Seat Type</label>
+          <select class="form-control" id="seat-type">
+            <option value="REGULAR">REGULAR</option>
+            <option value="PREMIUM">PREMIUM</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary mt-md" onclick="addSeat()">Add Seat</button>
+    </div>
+  </div>
+
+  <!-- ── CITIES TAB ── -->
+  <div class="admin-panel" id="cities-tab">
+    <div class="flex justify-between items-center mb-md" style="flex-wrap:wrap;gap:.75rem">
+      <h2 class="section-title" style="font-size:1.4rem">Cities</h2>
+      <button class="btn btn-primary btn-sm" onclick="openModal('add-city-modal')">+ Add City</button>
+    </div>
+    <div class="data-table__wrap">
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Name</th><th>State</th></tr></thead>
+        <tbody id="cities-tbody"><tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── USERS TAB ── -->
+  <div class="admin-panel" id="users-tab">
+    <h2 class="section-title mb-md" style="font-size:1.4rem">All Users</h2>
+    <div class="data-table__wrap">
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Roles</th></tr></thead>
+        <tbody id="users-tbody"><tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ ADD MOVIE MODAL ══ -->
+<div class="modal-backdrop" id="add-movie-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">Add Movie</span>
+      <button class="modal__close" onclick="closeModal('add-movie-modal')">✕</button>
+    </div>
+    <div class="modal__body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Title *</label>
+          <input class="form-control" id="m-title" placeholder="Movie title" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Genre</label>
+          <input class="form-control" id="m-genre" placeholder="e.g. Action">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <input class="form-control" id="m-lang" placeholder="e.g. Hindi">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Duration (mins)</label>
+          <input class="form-control" type="number" id="m-dur" placeholder="150">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rating (0-10)</label>
+          <input class="form-control" type="number" step="0.1" id="m-rating" placeholder="8.5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Release Date</label>
+          <input class="form-control" type="date" id="m-release">
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-movie-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addMovie()">Add Movie</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD SHOW MODAL ══ -->
+<div class="modal-backdrop" id="add-show-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">Add Show</span>
+      <button class="modal__close" onclick="closeModal('add-show-modal')">✕</button>
+    </div>
+    <div class="modal__body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group">
+          <label class="form-label">Movie ID *</label>
+          <input class="form-control" type="number" id="s-movieId">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Screen ID *</label>
+          <input class="form-control" type="number" id="s-screenId">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Show Date *</label>
+          <input class="form-control" type="date" id="s-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Start Time *</label>
+          <input class="form-control" type="time" id="s-start">
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Time</label>
+          <input class="form-control" type="time" id="s-end">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ticket Price (₹) *</label>
+          <input class="form-control" type="number" step="0.01" id="s-price" placeholder="250">
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-show-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addShow()">Add Show</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD THEATER MODAL ══ -->
+<div class="modal-backdrop" id="add-theater-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">Add Theater</span>
+      <button class="modal__close" onclick="closeModal('add-theater-modal')">✕</button>
+    </div>
+    <div class="modal__body">
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="form-group">
+          <label class="form-label">Theater Name *</label>
+          <input class="form-control" id="t-name" placeholder="e.g. PVR Cinemas">
+        </div>
+        <div class="form-group">
+          <label class="form-label">City ID *</label>
+          <input class="form-control" type="number" id="t-cityId" placeholder="City ID">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input class="form-control" id="t-addr" placeholder="Full address">
+        </div>
+    
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-theater-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addTheater()">Add Theater</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD SCREEN MODAL ══ -->
+<div class="modal-backdrop" id="add-screen-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">Add Screen</span>
+      <button class="modal__close" onclick="closeModal('add-screen-modal')">✕</button>
+    </div>
+    <div class="modal__body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group">
+          <label class="form-label">Screen Name *</label>
+          <input class="form-control" id="sc-name" placeholder="e.g. Screen 1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Theater ID *</label>
+          <input class="form-control" type="number" id="sc-theaterId">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Seats *</label>
+          <input class="form-control" type="number" id="sc-totalSeats" placeholder="100">
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-screen-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addScreen()">Add Screen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD CITY MODAL ══ -->
+<div class="modal-backdrop" id="add-city-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">Add City</span>
+      <button class="modal__close" onclick="closeModal('add-city-modal')">✕</button>
+    </div>
+    <div class="modal__body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group">
+          <label class="form-label">City Name *</label>
+          <input class="form-control" id="c-name" placeholder="e.g. Mumbai">
+        </div>
+        <div class="form-group">
+          <label class="form-label">State *</label>
+          <input class="form-control" id="c-state" placeholder="e.g. Maharashtra">
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-city-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addCity()">Add City</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    Utils.initNavbar('admin');
+    if (!Utils.requireAdmin()) return;
+    await loadAll();
+    // Set today as default for show date
+    document.getElementById('s-date').value = Utils.todayStr();
+  });
+
+  async function loadAll() {
+    try {
+      const [movies, theaters, shows, users, cities, screens] = await Promise.all([
+        API.Movies.getAll(), API.Theaters.getAll(), API.Shows.getAll(),
+        API.Auth.getAllUsers(), API.Cities.getAll(), API.Screens.getAll(),
+      ]);
+
+      // Stats
+      document.getElementById('stat-movies').textContent   = movies.length;
+      document.getElementById('stat-theaters').textContent = theaters.length;
+      document.getElementById('stat-shows').textContent    = shows.length;
+      document.getElementById('stat-users').textContent    = users.length;
+
+      // Tables
+      renderMoviesTable(movies);
+      renderShowsTable(shows);
+      renderTheatersTable(theaters);
+      renderScreensTable(screens);
+      renderCitiesTable(cities);
+      renderUsersTable(users);
+    } catch (e) {
+      showToast('Error loading data: ' + e.message, 'error');
+    }
+  }
+
+  function showTab(id, btn) {
+    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── TABLE RENDERERS ──────────────────────────────────────────────
+  function renderMoviesTable(movies) {
+    document.getElementById('movies-tbody').innerHTML = movies.length
+      ? movies.map(m => `<tr>
+          <td style="color:var(--text-muted)">${m.id}</td>
+          <td><strong>${m.title}</strong></td>
+          <td>${m.genre || '—'}</td>
+          <td>${m.language || '—'}</td>
+          <td>${m.durationMinutes ? m.durationMinutes + ' min' : '—'}</td>
+          <td>${m.rating ? '★ ' + m.rating : '—'}</td>
+          <td>${Utils.formatDate(m.releaseDate)}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">No movies</td></tr>`;
+  }
+
+  function renderShowsTable(shows) {
+    document.getElementById('shows-tbody').innerHTML = shows.length
+      ? shows.map(s => `<tr>
+          <td style="color:var(--text-muted)">${s.id}</td>
+          <td>${s.movie?.title || s.movie?.id || '—'}</td>
+          <td>Screen ${s.screen?.name || s.screen?.id || '—'}</td>
+          <td>${Utils.formatDate(s.showDate)}</td>
+          <td>${Utils.formatTime(s.startTime)}</td>
+          <td>₹${s.ticketPrice || '—'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">No shows</td></tr>`;
+  }
+
+  function renderTheatersTable(theaters) {
+    document.getElementById('theaters-tbody').innerHTML = theaters.length
+      ? theaters.map(t => `<tr>
+          <td style="color:var(--text-muted)">${t.id}</td>
+          <td><strong>${t.name}</strong></td>
+          <td>${t.city?.name || '—'}</td>
+          <td>${t.address || '—'}</td>
+          <td>${t.screens?.length ?? '—'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">No theaters</td></tr>`;
+  }
+
+  function renderScreensTable(screens) {
+    document.getElementById('screens-tbody').innerHTML = screens.length
+      ? screens.map(s => `<tr>
+          <td style="color:var(--text-muted)">${s.id}</td>
+          <td>${s.name || '—'}</td>
+          <td>${s.theater?.name || s.theater?.id || '—'}</td>
+          <td>${s.totalSeats || '—'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">No screens</td></tr>`;
+  }
+
+  function renderCitiesTable(cities) {
+    document.getElementById('cities-tbody').innerHTML = cities.length
+      ? cities.map(c => `<tr>
+          <td style="color:var(--text-muted)">${c.id}</td>
+          <td>${c.name}</td>
+          <td>${c.state || '—'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--text-muted)">No cities</td></tr>`;
+  }
+
+  function renderUsersTable(users) {
+    document.getElementById('users-tbody').innerHTML = users.length
+      ? users.map(u => `<tr>
+          <td style="color:var(--text-muted)">${u.id}</td>
+          <td><strong>${u.username}</strong></td>
+          <td>${u.email || '—'}</td>
+          <td>${(u.roles || []).map(r => `<span class="badge badge-admin" style="font-size:.65rem">${r.name || r}</span>`).join(' ')}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">No users</td></tr>`;
+  }
+
+  // ── FORM HANDLERS ────────────────────────────────────────────────
+  async function addMovie() {
+    const title = document.getElementById('m-title').value.trim();
+    if (!title) { showToast('Title is required', 'error'); return; }
+    try {
+      await API.Movies.add({
+        title,
+        genre:           document.getElementById('m-genre').value.trim() || null,
+        language:        document.getElementById('m-lang').value.trim() || null,
+        durationMinutes: +document.getElementById('m-dur').value || null,
+        rating:          +document.getElementById('m-rating').value || null,
+        releaseDate:     document.getElementById('m-release').value || null,
+              });
+      showToast('Movie added!', 'success');
+      closeModal('add-movie-modal');
+      await loadAll();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function addShow() {
+    const movieId  = +document.getElementById('s-movieId').value;
+    const screenId = +document.getElementById('s-screenId').value;
+    const date     = document.getElementById('s-date').value;
+    const start    = document.getElementById('s-start').value;
+    const price    = +document.getElementById('s-price').value;
+    if (!movieId || !screenId || !date || !start || !price) {
+      showToast('Fill required fields', 'error'); return;
+    }
+    try {
+      await API.Shows.add({
+        movieId, screenId, showDate: date, startTime: start,
+        endTime: document.getElementById('s-end').value || null,
+        ticketPrice: price,
+      });
+      showToast('Show added!', 'success');
+      closeModal('add-show-modal');
+      await loadAll();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function addTheater() {
+    const name   = document.getElementById('t-name').value.trim();
+    const cityId = +document.getElementById('t-cityId').value;
+    if (!name || !cityId) { showToast('Name and city are required', 'error'); return; }
+    try {
+      await API.Theaters.add({
+        name,
+        cityId,
+        address:      document.getElementById('t-addr').value.trim() || null,
+              });
+      showToast('Theater added!', 'success');
+      closeModal('add-theater-modal');
+      await loadAll();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function addScreen() {
+    const name      = document.getElementById('sc-name').value.trim();
+    const theaterId = +document.getElementById('sc-theaterId').value;
+    if (!name || !theaterId) { showToast('Name and theater ID required', 'error'); return; }
+    try {
+      await API.Screens.add({
+        name, theaterId,
+        totalSeats: +document.getElementById('sc-totalSeats').value || null,
+      });
+      showToast('Screen added!', 'success');
+      closeModal('add-screen-modal');
+      await loadAll();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function addSeat() {
+    const screenId   = +document.getElementById('seat-screenId').value;
+    const seatNumber = document.getElementById('seat-number').value.trim();
+    const row        = document.getElementById('seat-row').value.trim().toUpperCase();
+    const col        = +document.getElementById('seat-col').value;
+    const seatType   = document.getElementById('seat-type').value;
+    if (!screenId || !seatNumber || !row || !col) { showToast('Screen ID, seat number, row and column are required', 'error'); return; }
+    try {
+      await API.Seats.add({ screenId, seatNumber, row, col, seatType });
+      showToast('Seat added!', 'success');
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function addCity() {
+    const name = document.getElementById('c-name').value.trim();
+    const state = document.getElementById('c-state').value.trim();
+    if (!name || !state) { showToast('City name and state are required', 'error'); return; }
+    try {
+      await API.Cities.add(name, state);
+      showToast('City added!', 'success');
+      closeModal('add-city-modal');
+      await loadAll();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+</script>
+</body>
+</html>

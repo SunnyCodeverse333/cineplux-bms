@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bookings — CinePlex</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header id="main-nav" class="navbar"></header>
+
+<main class="page-content">
+
+  <div class="flex items-center justify-between mb-lg" style="flex-wrap:wrap;gap:1rem">
+    <h1 class="display-md">My Bookings</h1>
+    <div class="filter-chips" id="status-chips">
+      <span class="chip active" onclick="filterStatus(this,'')">All</span>
+      <span class="chip" onclick="filterStatus(this,'CONFIRMED')">Confirmed</span>
+      <span class="chip" onclick="filterStatus(this,'CANCELLED')">Cancelled</span>
+    </div>
+  </div>
+
+  <div id="bookings-list"></div>
+
+</main>
+
+<!-- Cancel confirm modal -->
+<div class="modal-backdrop" id="cancel-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">Cancel Booking</span>
+      <button class="modal__close" onclick="closeModal('cancel-modal')">✕</button>
+    </div>
+    <div class="modal__body">
+      <p style="color:var(--text-secondary)">
+        Are you sure you want to cancel booking <strong id="cancel-booking-id"></strong>?
+        This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal('cancel-modal')">Keep Booking</button>
+      <button class="btn btn-danger" id="cancel-confirm-btn" onclick="doCancel()">Yes, Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let allBookings   = [];
+  let activeStatus  = '';
+  let cancelTarget  = null;
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    Utils.initNavbar('bookings');
+    if (!Utils.requireLogin()) return;
+
+    await loadBookings();
+  });
+
+  async function loadBookings() {
+    const list = document.getElementById('bookings-list');
+    list.innerHTML = `<div class="loading-overlay"><div class="spinner"></div><span>Loading bookings…</span></div>`;
+
+    try {
+      // Get userId from stored session; if not stored, we use a workaround
+      let userId = window.Auth.getUser()?.id;
+
+      if (!userId) {
+        // Try to get it from admin endpoint if admin, else show error
+        if (window.Auth.isAdmin()) {
+          const users = await API.Auth.getAllUsers();
+          const me = users.find(u => u.username === window.Auth.getUser().username);
+          userId = me?.id;
+          // Cache it
+          const userData = window.Auth.getUser();
+          userData.id = userId;
+          localStorage.setItem('bms_user', JSON.stringify(userData));
+        }
+      }
+
+      if (!userId) {
+        list.innerHTML = `<div class="empty-state">
+          <div class="empty-state__icon">⚠️</div>
+          <div class="empty-state__title">Could not identify user</div>
+          <div class="empty-state__sub">Backend login response must include user id. Logout after backend fix, then login again.</div>
+        </div>`;
+        return;
+      }
+
+      allBookings = await API.Bookings.byUser(userId);
+      allBookings.sort((a, b) => new Date(b.bookedAt) - new Date(a.bookedAt));
+      renderBookings();
+    } catch (e) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="empty-state__icon">⚠️</div>
+        <div class="empty-state__title">Could not load bookings</div>
+        <div class="empty-state__sub">${e.message}</div>
+      </div>`;
+    }
+  }
+
+  function filterStatus(el, status) {
+    activeStatus = status;
+    document.querySelectorAll('#status-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderBookings();
+  }
+
+  function renderBookings() {
+    const list = document.getElementById('bookings-list');
+    let bookings = activeStatus
+      ? allBookings.filter(b => b.status === activeStatus)
+      : allBookings;
+
+    if (!bookings.length) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="empty-state__icon">🎟️</div>
+        <div class="empty-state__title">No bookings yet</div>
+        <div class="empty-state__sub">Book your first movie and it'll show up here</div>
+        <a href="movies.html" class="btn btn-primary mt-md">Browse Movies</a>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = bookings.map(b => {
+      const movie   = b.show?.movie;
+      const show    = b.show;
+      const seats   = b.seats || [];
+      const seatNos = seats.map(s => `${s.row || ''}${s.seatNumber || ''}`).join(', ') || `${seats.length} seat(s)`;
+      const canCancel = b.status === 'CONFIRMED';
+
+      return `<div class="booking-card mb-md">
+        <div class="booking-card__poster">🎬</div>
+        <div class="booking-card__info">
+          <div class="booking-card__title">${movie?.title || 'Unknown Movie'}</div>
+          <div class="booking-card__meta">
+            <span>📅 ${Utils.formatDate(show?.showDate)} · ${Utils.formatTime(show?.startTime)}</span>
+            <span>💺 ${seatNos}</span>
+            <span>🕐 Booked ${Utils.formatDateTime(b.bookedAt)}</span>
+            <span>Booking #${b.id} · ${Utils.statusBadge(b.status)}</span>
+          </div>
+        </div>
+        <div class="booking-card__actions">
+          <span class="booking-card__price">₹${b.totalPrice?.toFixed(2) || '0.00'}</span>
+          ${canCancel ? `
+            <button class="btn btn-danger btn-sm" onclick="promptCancel(${b.id})">Cancel</button>
+          ` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function promptCancel(id) {
+    cancelTarget = id;
+    document.getElementById('cancel-booking-id').textContent = `#${id}`;
+    openModal('cancel-modal');
+  }
+
+  async function doCancel() {
+    const btn = document.getElementById('cancel-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Cancelling…';
+    try {
+      await API.Bookings.cancel(cancelTarget);
+      const b = allBookings.find(x => x.id === cancelTarget);
+      if (b) b.status = 'CANCELLED';
+      closeModal('cancel-modal');
+      showToast('Booking cancelled', 'success');
+      renderBookings();
+    } catch (e) {
+      showToast('Cancel failed: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Yes, Cancel';
+    }
+  }
+</script>
+</body>
+</html>

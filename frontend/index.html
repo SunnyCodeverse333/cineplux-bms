@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CinePlex — Book Movie Tickets</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Navbar ── --> 
+<header id="main-nav" class="navbar"></header>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <h1 class="hero__title">
+    THE<br><span class="highlight">BIG SCREEN</span><br>AWAITS
+  </h1>
+  <p class="hero__sub">Discover movies, pick your seats, and make every showing unforgettable.</p>
+  <div class="hero__search">
+    <div class="search-bar">
+      <span class="search-bar__icon">🔍</span>
+      <input type="text" id="hero-search" placeholder="Search movies, genres…" autocomplete="off">
+      <button onclick="handleHeroSearch()">Search</button>
+    </div>
+  </div>
+  <div class="filter-chips hero__genres" id="genre-chips"></div>
+</section>
+
+<!-- ── Now Showing ── -->
+<main class="page-content" style="padding-top:0">
+
+  <section class="mb-lg">
+    <div class="section-header" style="justify-content:space-between;flex-wrap:wrap;gap:.75rem">
+      <div class="flex items-center gap-md">
+        <h2 class="section-title">Now Showing</h2>
+        <span class="section-subtitle" id="movie-count"></span>
+      </div>
+      <div class="flex items-center gap-sm" style="flex-wrap:wrap">
+        <select class="form-control" id="lang-filter" style="width:auto;font-size:.85rem" onchange="applyFilters()">
+          <option value="">All Languages</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
+      </div>
+    </div>
+    <div class="movies-grid" id="movies-grid"></div>
+  </section>
+
+</main>
+
+<!-- ── Footer ── -->
+<footer style="border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-muted);font-size:.8rem">
+  <span style="font-family:var(--font-display);font-size:1.2rem;color:var(--accent);letter-spacing:.06em">CINEPLEX</span>
+  <div style="margin-top:.5rem">© 2025 CinePlex. All rights reserved.</div>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/utils.js"></script>
+<script>
+  let allMovies = [];
+  let activeGenre = '';
+  let activeLang  = '';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    Utils.initNavbar('home');
+    await loadMovies();
+
+    document.getElementById('hero-search').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleHeroSearch();
+    });
+  });
+
+  async function loadMovies() {
+    const grid = document.getElementById('movies-grid');
+    Utils.renderMovieSkeletons(grid, 10);
+    try {
+      allMovies = await API.Movies.getAll();
+      buildFilters();
+      applyFilters();
+    } catch (e) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state__icon">⚠️</div>
+        <div class="empty-state__title">Could not load movies</div>
+        <div class="empty-state__sub">Make sure the backend is running on port 8080</div>
+      </div>`;
+    }
+  }
+
+  function buildFilters() {
+    // Genres
+    const genres = [...new Set(allMovies.map(m => m.genre).filter(Boolean))];
+    const chipsCont = document.getElementById('genre-chips');
+    chipsCont.innerHTML = `<span class="chip active" data-genre="" onclick="selectGenre(this,'')">All</span>`
+      + genres.map(g => `<span class="chip" data-genre="${g}" onclick="selectGenre(this,'${g}')">${g}</span>`).join('');
+
+    // Languages
+    const langs = [...new Set(allMovies.map(m => m.language).filter(Boolean))];
+    const sel = document.getElementById('lang-filter');
+    sel.innerHTML = `<option value="">All Languages</option>`
+      + langs.map(l => `<option value="${l}">${l}</option>`).join('');
+  }
+
+  function selectGenre(el, genre) {
+    activeGenre = genre;
+    document.querySelectorAll('#genre-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    activeLang = document.getElementById('lang-filter').value;
+    let movies = allMovies;
+    if (activeGenre) movies = movies.filter(m => m.genre === activeGenre);
+    if (activeLang)  movies = movies.filter(m => m.language === activeLang);
+
+    document.getElementById('movie-count').textContent =
+      `${movies.length} film${movies.length !== 1 ? 's' : ''}`;
+    Utils.renderMovies(movies, document.getElementById('movies-grid'));
+  }
+
+  function clearFilters() {
+    activeGenre = ''; activeLang = '';
+    document.getElementById('lang-filter').value = '';
+    document.querySelectorAll('#genre-chips .chip').forEach((c,i) => {
+      c.classList.toggle('active', i === 0);
+    });
+    applyFilters();
+  }
+
+  async function handleHeroSearch() {
+    const q = document.getElementById('hero-search').value.trim();
+    if (!q) { applyFilters(); return; }
+    const grid = document.getElementById('movies-grid');
+    Utils.renderMovieSkeletons(grid, 6);
+    try {
+      const results = await API.Movies.search(q);
+      document.getElementById('movie-count').textContent = `${results.length} result${results.length !== 1 ? 's' : ''} for "${q}"`;
+      Utils.renderMovies(results, grid);
+    } catch {
+      showToast('Search failed', 'error');
+    }
+  }
+</script>
+</body>
+</html>
