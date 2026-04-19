@@ -25,17 +25,17 @@ public class DataInitializer {
     public CommandLineRunner initAdmin() {
         return args -> {
 
-            // ✅ check if admin already exists
+            //  check if admin already exists
             if (userRepository.existsByUsername("admin")) {
                 System.out.println("Admin already exists");
                 return;
             }
 
-            // ✅ get admin role
+            //  get admin role
             Role adminRole = roleRepository.findByName("ROLE_ADMIN")
                     .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
 
-            // ✅ create admin
+            //  create admin
             User admin = User.builder()
                     .username("admin")
                     .email("admin@gmail.com")
@@ -46,7 +46,7 @@ public class DataInitializer {
 
             userRepository.save(admin);
 
-            System.out.println("🔥 Default admin created: admin / admin123");
+            System.out.println(" Default admin created: admin / admin123");
         };
     }
 }

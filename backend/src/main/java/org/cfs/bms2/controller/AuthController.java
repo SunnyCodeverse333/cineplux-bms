@@ -55,7 +55,6 @@ public class AuthController {
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-        // 🔥 ADD THIS BLOCK (VERY IMPORTANT)
         User dbUser = userService.getUserRepository()
                 .findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -63,7 +62,7 @@ public class AuthController {
         String token = jwtService.generateToken(userDetails.getUsername());
 
         Map<String, Object> response = new HashMap<>();
-        response.put("id", dbUser.getId());   // ✅ THIS IS THE FIX
+        response.put("id", dbUser.getId());
         response.put("token", token);
         response.put("type", "Bearer");
         response.put("username", userDetails.getUsername());

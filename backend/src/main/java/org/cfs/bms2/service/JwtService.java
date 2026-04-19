@@ -57,9 +57,9 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey()) //// 🔥 key used for verification
+                .verifyWith(getSigningKey()) ////  key used for verification
                 .build() //now create the final parser object
-                .parseSignedClaims(token) // // 🔥 verification happens HERE
+                .parseSignedClaims(token) // //  verification happens HERE
                 .getPayload();
     }
     public Date extractExpiration(String token){

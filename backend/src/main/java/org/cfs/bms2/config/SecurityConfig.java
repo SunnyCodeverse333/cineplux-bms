@@ -30,8 +30,8 @@ public class SecurityConfig {
     //Frontend → SecurityFilterChain → Controller (Request hits Security FIRST, not MVC)
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http// 1. MUST ADD THIS: Link your CorsConfig bean to the Security Filter Chain
-                .cors(org.springframework.security.config.Customizer.withDefaults()) //Hey security, use my CorsConfig CORS never runs → request blocked → 403
+        http//  Link your CorsConfig bean to the Security Filter Chain
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

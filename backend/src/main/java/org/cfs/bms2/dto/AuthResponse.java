@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class AuthResponse {
-    private Long id;       // 👈 Add this field!
+    private Long id;
     private String username;
     private List<String> roles;
 }

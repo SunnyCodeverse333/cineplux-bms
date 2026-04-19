@@ -33,17 +33,17 @@ public class BookingService {
     @Transactional
     public Booking createBooking(BookingRequest bookingRequest){
 
-        // ✅ Get logged-in user
+        //  Get logged-in user
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
 
         User user = userService.getUserRepository().findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ✅ Get show
+        //  Get show
         Show show = showService.getShowById(bookingRequest.getShowId());
 
-        // ✅ Check already booked seats
+        //  Check already booked seats
         List<Long> alreadyBookedSeats = bookingRepository.findBookedSeatIdsByShowId(show.getId());
 
         for(Long seatId: bookingRequest.getSeatIds()){
@@ -52,14 +52,14 @@ public class BookingService {
             }
         }
 
-        // ✅ Fetch seats
+        //  Fetch seats
         List<Seat> seats = seatRepository.findAllById(bookingRequest.getSeatIds());
 
         if(seats.size() != bookingRequest.getSeatIds().size()){
             throw new RuntimeException("Some seats are invalid");
         }
 
-        // ✅ Calculate price
+        //  Calculate price
         double totalPrice = 0;
 
         for (Seat seat : seats) {
@@ -70,7 +70,7 @@ public class BookingService {
             }
         }
 
-        // ✅ Create booking
+        //  Create booking
         Booking booking = Booking.builder()
                 .user(user)
                 .show(show)
